@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SpeedConfig = require(
@@ -9,10 +8,7 @@ local SpeedConfig = require(
 
 local SPEED_LEVELS = SpeedConfig.Levels
 
-local playerDataStore = DataStoreService:GetDataStore("PlayerData_v3")
-
 local STUDS_PER_STEP = 2
-local AUTOSAVE_INTERVAL = 60
 
 local playerData = {}
 
@@ -64,7 +60,8 @@ local function updateSpeedLevel(player)
 		return
 	end
 
-	local newLevel = SpeedConfig.getLevelFromSteps(steps.Value)
+	local newLevel =
+		SpeedConfig.getLevelFromSteps(steps.Value)
 
 	if speed.Value ~= newLevel then
 		speed.Value = newLevel
@@ -72,75 +69,54 @@ local function updateSpeedLevel(player)
 	end
 end
 
-local function loadData(player)
-	local success, savedData = pcall(function()
-		return playerDataStore:GetAsync(player.UserId)
-	end)
+local function setupCharacter(player, character)
+	local humanoid =
+		character:WaitForChild("Humanoid")
 
-	if success and type(savedData) == "table" then
-		return {
-			steps = savedData.steps or 0,
-		}
+	local rootPart =
+		character:WaitForChild("HumanoidRootPart")
+
+	local leaderstats =
+		player:WaitForChild("leaderstats")
+
+	local speed =
+		leaderstats:WaitForChild("Speed")
+
+	local levelData =
+		SPEED_LEVELS[speed.Value]
+
+	if levelData then
+		humanoid.WalkSpeed = levelData.walkSpeed
 	end
 
-	if not success then
-		warn("Errore caricamento dati per " .. player.Name)
-	end
+	local data = playerData[player]
 
-	return {
-		steps = 0,
-	}
-end
-
-local function saveData(player)
-	local leaderstats = player:FindFirstChild("leaderstats")
-
-	if not leaderstats then
+	if not data then
 		return
 	end
 
-	local steps = leaderstats:FindFirstChild("Steps")
-
-	if not steps then
-		return
-	end
-
-	local dataToSave = {
-		steps = steps.Value,
-	}
-
-	local success, errorMessage = pcall(function()
-		playerDataStore:UpdateAsync(player.UserId, function()
-			return dataToSave
-		end)
-	end)
-
-	if not success then
-		warn(
-			"Errore salvataggio dati per "
-				.. player.Name
-				.. ": "
-				.. tostring(errorMessage)
-		)
-	end
+	data.lastPosition = rootPart.Position
+	data.distanceBuffer = 0
 end
 
 local function setupPlayer(player)
-	local savedData = loadData(player)
+	local leaderstats =
+		player:WaitForChild("leaderstats")
 
-	local leaderstats = Instance.new("Folder")
-	leaderstats.Name = "leaderstats"
-	leaderstats.Parent = player
+	local steps =
+		leaderstats:WaitForChild("Steps")
 
-	local steps = Instance.new("IntValue")
-	steps.Name = "Steps"
-	steps.Value = savedData.steps
-	steps.Parent = leaderstats
+	local speed =
+		leaderstats:FindFirstChild("Speed")
 
-	local speed = Instance.new("IntValue")
-	speed.Name = "Speed"
-	speed.Value = SpeedConfig.getLevelFromSteps(steps.Value)
-	speed.Parent = leaderstats
+	if not speed then
+		speed = Instance.new("IntValue")
+		speed.Name = "Speed"
+		speed.Parent = leaderstats
+	end
+
+	speed.Value =
+		SpeedConfig.getLevelFromSteps(steps.Value)
 
 	playerData[player] = {
 		lastPosition = nil,
@@ -148,25 +124,28 @@ local function setupPlayer(player)
 	}
 
 	player.CharacterAdded:Connect(function(character)
-		local humanoid = character:WaitForChild("Humanoid")
-		local rootPart = character:WaitForChild("HumanoidRootPart")
-
-		local levelData = SPEED_LEVELS[speed.Value]
-
-		humanoid.WalkSpeed = levelData.walkSpeed
-
-		playerData[player].lastPosition = rootPart.Position
-		playerData[player].distanceBuffer = 0
+		setupCharacter(player, character)
 	end)
+
+	if player.Character then
+		task.spawn(
+			setupCharacter,
+			player,
+			player.Character
+		)
+	end
 end
 
 local function removePlayer(player)
-	saveData(player)
 	playerData[player] = nil
 end
 
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(removePlayer)
+
+for _, player in Players:GetPlayers() do
+	task.spawn(setupPlayer, player)
+end
 
 RunService.Heartbeat:Connect(function()
 	for player, data in pairs(playerData) do
@@ -176,15 +155,21 @@ RunService.Heartbeat:Connect(function()
 			continue
 		end
 
-		local humanoid = character:FindFirstChild("Humanoid")
-		local rootPart = character:FindFirstChild("HumanoidRootPart")
-		local leaderstats = player:FindFirstChild("leaderstats")
+		local humanoid =
+			character:FindFirstChild("Humanoid")
+
+		local rootPart =
+			character:FindFirstChild("HumanoidRootPart")
+
+		local leaderstats =
+			player:FindFirstChild("leaderstats")
 
 		if not humanoid or not rootPart or not leaderstats then
 			continue
 		end
 
-		local steps = leaderstats:FindFirstChild("Steps")
+		local steps =
+			leaderstats:FindFirstChild("Steps")
 
 		if not steps then
 			continue
@@ -203,7 +188,8 @@ RunService.Heartbeat:Connect(function()
 				rootPart.Position.Z
 			)
 
-			local distance = (newPosition - oldPosition).Magnitude
+			local distance =
+				(newPosition - oldPosition).Magnitude
 
 			if distance < 10 then
 				data.distanceBuffer += distance
@@ -213,7 +199,8 @@ RunService.Heartbeat:Connect(function()
 				)
 
 				if stepsGained > 0 then
-					data.distanceBuffer -= stepsGained * STUDS_PER_STEP
+					data.distanceBuffer -=
+						stepsGained * STUDS_PER_STEP
 
 					steps.Value += stepsGained
 
@@ -223,21 +210,5 @@ RunService.Heartbeat:Connect(function()
 		end
 
 		data.lastPosition = rootPart.Position
-	end
-end)
-
-task.spawn(function()
-	while true do
-		task.wait(AUTOSAVE_INTERVAL)
-
-		for _, player in Players:GetPlayers() do
-			saveData(player)
-		end
-	end
-end)
-
-game:BindToClose(function()
-	for _, player in Players:GetPlayers() do
-		saveData(player)
 	end
 end)

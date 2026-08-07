@@ -1,10 +1,22 @@
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PORTAL_TAG = "LevelPortal"
 local TOUCH_COOLDOWN = 1
+local REMOTE_EVENT_NAME = "PortalFeedback"
 
 local playerCooldowns = {}
+
+-- RemoteEvent usato per comunicare con la UI del giocatore
+local portalFeedbackEvent =
+	ReplicatedStorage:FindFirstChild(REMOTE_EVENT_NAME)
+
+if not portalFeedbackEvent then
+	portalFeedbackEvent = Instance.new("RemoteEvent")
+	portalFeedbackEvent.Name = REMOTE_EVENT_NAME
+	portalFeedbackEvent.Parent = ReplicatedStorage
+end
 
 local function getPlayerFromHit(hit)
 	local character = hit.Parent
@@ -45,7 +57,8 @@ local function teleportPlayer(player, destination)
 		return
 	end
 
-	rootPart.CFrame = destination.CFrame + Vector3.new(0, 4, 0)
+	rootPart.CFrame =
+		destination.CFrame + Vector3.new(0, 4, 0)
 end
 
 local function connectPortal(portal)
@@ -69,7 +82,8 @@ local function connectPortal(portal)
 			return
 		end
 
-		local requiredLevel = portal:GetAttribute("RequiredLevel")
+		local requiredLevel =
+			portal:GetAttribute("RequiredLevel")
 
 		if type(requiredLevel) ~= "number" then
 			warn(
@@ -114,6 +128,11 @@ local function connectPortal(portal)
 
 		if playerLevel >= requiredLevel then
 			teleportPlayer(player, destination)
+		else
+			portalFeedbackEvent:FireClient(
+				player,
+				requiredLevel
+			)
 		end
 
 		task.delay(TOUCH_COOLDOWN, function()
