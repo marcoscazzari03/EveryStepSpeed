@@ -1,70 +1,20 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SpeedConfig = require(
+	ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SpeedConfig")
+)
+
+local SPEED_LEVELS = SpeedConfig.Levels
 
 local playerDataStore = DataStoreService:GetDataStore("PlayerData_v3")
 
 local STUDS_PER_STEP = 2
 local AUTOSAVE_INTERVAL = 60
 
-local SPEED_LEVELS = {
-	{
-		stepsRequired = 0,
-		walkSpeed = 16,
-	},
-	{
-		stepsRequired = 100,
-		walkSpeed = 18,
-	},
-	{
-		stepsRequired = 300,
-		walkSpeed = 21,
-	},
-	{
-		stepsRequired = 700,
-		walkSpeed = 24,
-	},
-	{
-		stepsRequired = 1500,
-		walkSpeed = 28,
-	},
-	{
-		stepsRequired = 3000,
-		walkSpeed = 33,
-	},
-	{
-		stepsRequired = 6000,
-		walkSpeed = 39,
-	},
-	{
-		stepsRequired = 12000,
-		walkSpeed = 46,
-	},
-	{
-		stepsRequired = 25000,
-		walkSpeed = 54,
-	},
-	{
-		stepsRequired = 50000,
-		walkSpeed = 64,
-	},
-}
-
 local playerData = {}
-
-local function getSpeedLevel(steps)
-	local currentLevel = 1
-
-	for level, levelData in ipairs(SPEED_LEVELS) do
-		if steps >= levelData.stepsRequired then
-			currentLevel = level
-		else
-			break
-		end
-	end
-
-	return currentLevel
-end
 
 local function applySpeed(player)
 	local leaderstats = player:FindFirstChild("leaderstats")
@@ -114,7 +64,7 @@ local function updateSpeedLevel(player)
 		return
 	end
 
-	local newLevel = getSpeedLevel(steps.Value)
+	local newLevel = SpeedConfig.getLevelFromSteps(steps.Value)
 
 	if speed.Value ~= newLevel then
 		speed.Value = newLevel
@@ -189,7 +139,7 @@ local function setupPlayer(player)
 
 	local speed = Instance.new("IntValue")
 	speed.Name = "Speed"
-	speed.Value = getSpeedLevel(steps.Value)
+	speed.Value = SpeedConfig.getLevelFromSteps(steps.Value)
 	speed.Parent = leaderstats
 
 	playerData[player] = {

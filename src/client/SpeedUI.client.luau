@@ -1,5 +1,13 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SpeedConfig = require(
+	ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SpeedConfig")
+)
+
+local SPEED_LEVELS = SpeedConfig.Levels
+local MAX_LEVEL = #SPEED_LEVELS
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -8,21 +16,6 @@ local leaderstats = player:WaitForChild("leaderstats")
 local speed = leaderstats:WaitForChild("Speed")
 local steps = leaderstats:WaitForChild("Steps")
 
-local SPEED_LEVELS = {
-	{ stepsRequired = 0 },
-	{ stepsRequired = 100 },
-	{ stepsRequired = 300 },
-	{ stepsRequired = 700 },
-	{ stepsRequired = 1500 },
-	{ stepsRequired = 3000 },
-	{ stepsRequired = 6000 },
-	{ stepsRequired = 12000 },
-	{ stepsRequired = 25000 },
-	{ stepsRequired = 50000 },
-}
-
-local MAX_LEVEL = #SPEED_LEVELS
-
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SpeedUI"
 screenGui.ResetOnSpawn = false
@@ -30,22 +23,16 @@ screenGui.Parent = playerGui
 
 local previousSteps = steps.Value
 
--- =========================================================
 -- BARRA PRINCIPALE IN BASSO
--- =========================================================
 
 local root = Instance.new("Frame")
 root.Name = "Root"
 root.AnchorPoint = Vector2.new(0.5, 1)
-
--- 0.96 = quasi in fondo allo schermo
 root.Position = UDim2.fromScale(0.5, 0.96)
-
 root.Size = UDim2.fromOffset(860, 100)
 root.BackgroundTransparency = 1
 root.Parent = screenGui
 
--- Box bianco
 local topBox = Instance.new("Frame")
 topBox.Name = "TopBox"
 topBox.Position = UDim2.fromOffset(40, 0)
@@ -63,9 +50,7 @@ topStroke.Thickness = 5
 topStroke.Color = Color3.fromRGB(0, 0, 0)
 topStroke.Parent = topBox
 
--- =========================================================
--- SCARPA A SINISTRA
--- =========================================================
+-- SCARPA
 
 local iconHolder = Instance.new("Frame")
 iconHolder.Name = "IconHolder"
@@ -87,9 +72,7 @@ shoeIcon.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 shoeIcon.TextStrokeTransparency = 0
 shoeIcon.Parent = iconHolder
 
--- =========================================================
 -- LIVELLO
--- =========================================================
 
 local levelLabel = Instance.new("TextLabel")
 levelLabel.Name = "LevelLabel"
@@ -105,9 +88,7 @@ levelLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 levelLabel.TextStrokeTransparency = 0
 levelLabel.Parent = topBox
 
--- =========================================================
 -- EXP
--- =========================================================
 
 local expLabel = Instance.new("TextLabel")
 expLabel.Name = "ExpLabel"
@@ -124,25 +105,16 @@ expLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 expLabel.TextStrokeTransparency = 0
 expLabel.Parent = topBox
 
--- =========================================================
--- AREA INVISIBILE DEI +1
--- =========================================================
+-- AREA POPUP +1
 
 local popupArea = Instance.new("Frame")
 popupArea.Name = "PopupArea"
 popupArea.AnchorPoint = Vector2.new(0.5, 1)
-
--- Subito sopra la barra principale
 popupArea.Position = UDim2.fromScale(0.5, 0.84)
-
 popupArea.Size = UDim2.fromOffset(900, 140)
 popupArea.BackgroundTransparency = 1
 popupArea.BorderSizePixel = 0
 popupArea.Parent = screenGui
-
--- =========================================================
--- TESTO EXP
--- =========================================================
 
 local function getCurrentExpText()
 	local currentLevel = speed.Value
@@ -170,10 +142,6 @@ local function getCurrentExpText()
 		.. tostring(stepsNeeded)
 end
 
--- =========================================================
--- AGGIORNAMENTO UI
--- =========================================================
-
 local function updateMainUI()
 	levelLabel.Text =
 		"Livello: " .. tostring(speed.Value)
@@ -182,65 +150,40 @@ local function updateMainUI()
 		getCurrentExpText()
 end
 
--- =========================================================
--- POPUP 👟 +1
--- =========================================================
-
 local function createStepPopup()
 	local popup = Instance.new("TextLabel")
 	popup.Name = "StepPopup"
-
 	popup.AnchorPoint = Vector2.new(0.5, 0.5)
 
-	-- Posizione casuale nell'area sopra la barra
 	local randomX = math.random(80, 820)
 	local randomY = math.random(45, 115)
 
-	popup.Position =
-		UDim2.fromOffset(randomX, randomY)
-
-	popup.Size =
-		UDim2.fromOffset(110, 40)
-
+	popup.Position = UDim2.fromOffset(randomX, randomY)
+	popup.Size = UDim2.fromOffset(110, 40)
 	popup.BackgroundTransparency = 1
-
 	popup.Font = Enum.Font.Cartoon
-
 	popup.Text = "👟 +1"
-
 	popup.TextScaled = true
-
-	popup.TextColor3 =
-		Color3.fromRGB(100, 200, 255)
-
-	popup.TextStrokeColor3 =
-		Color3.fromRGB(0, 0, 0)
-
+	popup.TextColor3 = Color3.fromRGB(100, 200, 255)
+	popup.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	popup.TextStrokeTransparency = 0
-
 	popup.Parent = popupArea
 
-	-- Ogni popup sale di una quantità leggermente diversa
-	local moveUp =
-		math.random(25, 45)
+	local moveUp = math.random(25, 45)
 
 	local tween = TweenService:Create(
 		popup,
-
 		TweenInfo.new(
 			0.6,
 			Enum.EasingStyle.Quad,
 			Enum.EasingDirection.Out
 		),
-
 		{
 			Position = UDim2.fromOffset(
 				randomX,
 				randomY - moveUp
 			),
-
 			TextTransparency = 1,
-
 			TextStrokeTransparency = 1,
 		}
 	)
@@ -252,29 +195,17 @@ local function createStepPopup()
 	end)
 end
 
--- Se il server assegna più passi nello stesso frame,
--- mostriamo comunque un +1 per ogni passo.
 local function showStepPopups(amount)
 	for i = 1, amount do
-		task.delay(
-			(i - 1) * 0.035,
-
-			function()
-				createStepPopup()
-			end
-		)
+		task.delay((i - 1) * 0.035, function()
+			createStepPopup()
+		end)
 	end
 end
 
--- =========================================================
--- CAMBIO STEPS
--- =========================================================
-
 local function onStepsChanged()
 	local currentSteps = steps.Value
-
-	local gained =
-		currentSteps - previousSteps
+	local gained = currentSteps - previousSteps
 
 	updateMainUI()
 
@@ -285,15 +216,10 @@ local function onStepsChanged()
 	previousSteps = currentSteps
 end
 
--- =========================================================
--- CAMBIO LIVELLO
--- =========================================================
-
 local function onSpeedChanged()
 	updateMainUI()
 end
 
--- Prima inizializzazione
 updateMainUI()
 
 steps:GetPropertyChangedSignal("Value")
